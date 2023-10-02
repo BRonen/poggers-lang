@@ -8,14 +8,14 @@ import Parser (parse)
 
 source :: String
 source = unlines [
-        "let x = 1;",
-        "let y = + 2 3;",
-        "print('wdawd');",
-        "+ x y"
+        "let a = + 1 2;",
+        "+ a 4"
     ]
 
 main :: IO ()
 main = do
-    -- print $ parse $ tokenize source
-    print $ tokenize "+ 1 4"
-    print $ parse $ tokenize "+ 1 4"
+    print $ tokenize $ init source
+    print $ parse $ tokenize $ init source
+    putStrLn "\n---------------\n"
+    print $ tokenize "let a = fn x y => + x y;\nlet c = a 1 2;\nprint c"
+    print $ parse $ tokenize "let a = fn x y => + x y;\nlet c = a 1 2;\nprint c"

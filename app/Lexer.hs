@@ -1,22 +1,53 @@
 module Lexer (tokenize, Token (..)) where
 
--- TODO: create a different literal for each type
-data Token = Literal String | Plus | Minus | Slash | Star | Let | Equal | LParen | RParen | BreakExpr deriving (Show, Eq)
+import Data.Char(isDigit)
+import Text.Read(readMaybe)
+
+data Token =
+    TextToken String
+    | LiteralToken String
+    | NumericToken Integer
+    | Let
+    | FunctionDef
+    | FatArrow
+    | Plus
+    | Minus
+    | Slash
+    | Star
+    | Equal
+    | LParen
+    | RParen
+    | BreakExpr
+        deriving (Show, Eq)
 
 especialCharacters :: [Char]
 especialCharacters = ['(', ')', ';', '+', '-', '/', '*']
 
--- TODO: Remove "++ ([acc])" and "++ ([[x]])"
+-- TODO: remove duplicated code
 getWordsFromSource :: [Char] -> [String] -> String -> [String]
 getWordsFromSource acc wordsAcc [] = (wordsAcc ++ ([acc]))
+getWordsFromSource [] wordsAcc (x:xs)
+    | elem x especialCharacters = getWordsFromSource [] (wordsAcc ++ ([[x]])) xs
+    | x == ' ' || x == '\n' = getWordsFromSource [] wordsAcc xs
+    | otherwise = getWordsFromSource [x] wordsAcc xs
 getWordsFromSource acc wordsAcc (x:xs)
     | elem x especialCharacters = getWordsFromSource [] (wordsAcc ++ ([acc]) ++ ([[x]])) xs
     | x == ' ' || x == '\n' = getWordsFromSource [] (wordsAcc ++ ([acc])) xs
     | otherwise = getWordsFromSource (acc++([x])) wordsAcc xs
 
+tokenizeLiteral :: String -> Token
+tokenizeLiteral word
+    | all isDigit word = case (readMaybe word :: Maybe Integer) of
+        Just value -> NumericToken value
+        Nothing    -> LiteralToken word
+    | head word == '"' && last word == '"' = TextToken $ tail $ init word
+    | otherwise = LiteralToken word
+
 getTokenByWord :: [Char] -> Token
 getTokenByWord word = case word of
     "let" -> Let
+    "fn" -> FunctionDef
+    "=>" -> FatArrow
     "="   -> Equal
     "("   -> LParen
     ")"   -> RParen
@@ -25,7 +56,7 @@ getTokenByWord word = case word of
     "-"   -> Minus
     "/"   -> Slash
     "*"   -> Star
-    _     -> Literal word
+    _     -> tokenizeLiteral word
 
 tokenize :: String -> [Token]
-tokenize source = filter (\s -> s /= (Literal "")) $ map getTokenByWord $ getWordsFromSource [] [] source
+tokenize source = map getTokenByWord $ getWordsFromSource [] [] source
