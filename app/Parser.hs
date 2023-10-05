@@ -15,13 +15,12 @@ data Expr = Assignment String Expr Expr
     | Call String [Expr]
     | Numeric Integer
     | Text String
-    | Literal String
         deriving (Show)
 
 parseValue :: Token -> [Token] -> (Expr, [Token])
 parseValue (TextToken value) tokens = (Text value, tokens)
 parseValue (NumericToken value) tokens = (Numeric value, tokens)
-parseValue (LiteralToken value) tokens = (Literal value, tokens)
+parseValue (LiteralToken value) tokens = (Var value, tokens)
 parseValue token _ = error $ show ("Invalid token passed to value parser", token)
 
 parseOperator :: Operator -> [Token] -> (Expr, [Token])
@@ -70,7 +69,6 @@ parsePrint tokens = (Print f, s)
         (f, s) = parseParameters [] tokens
 
 parse :: [Token] -> (Expr, [Token])
-parse [] = (Var "Hello world", [])
 parse (token:tokens) = case token of
     Let -> parseVariable tokens
     FunctionDef -> parseFunction tokens
