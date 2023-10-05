@@ -17,5 +17,5 @@ main = do
     print $ tokenize $ init source
     print $ parse $ tokenize $ init source
     putStrLn "\n---------------\n"
-    print $ tokenize "let a = fn x y => + x y;\nlet c = a 1 2;\nprint c"
-    print $ parse $ tokenize "let a = fn x y => + x y;\nlet c = a 1 2;\nprint c"
+    print $ tokenize "let a = fn x y => + x y;\nlet c = (a 1 2);\nprint c"
+    print $ parse $ tokenize "let a = fn x y => + x y;\nlet c = (a 1 2);\nprint c"

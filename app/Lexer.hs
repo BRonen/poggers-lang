@@ -7,6 +7,7 @@ data Token =
     TextToken String
     | LiteralToken String
     | NumericToken Integer
+    | PrintToken
     | Let
     | FunctionDef
     | FatArrow
@@ -45,6 +46,7 @@ tokenizeLiteral word
 
 getTokenByWord :: [Char] -> Token
 getTokenByWord word = case word of
+    "print" -> PrintToken
     "let" -> Let
     "fn" -> FunctionDef
     "=>" -> FatArrow
