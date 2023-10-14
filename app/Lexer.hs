@@ -11,13 +11,15 @@ data Token
   | FatArrow
   | Comma
   | Equal
+  | LBracket
+  | RBracket
   | LParen
   | RParen
   | BreakExpr
   deriving (Show, Eq)
 
 especialCharacters :: [Char]
-especialCharacters = ['(', ')', ';', ',']
+especialCharacters = ['[', ']', '(', ')', ';', ',']
 
 -- TODO: remove duplicated code
 getWordsFromSource :: [Char] -> [String] -> String -> [String]
@@ -45,6 +47,8 @@ getTokenByWord word = case word of
   "let" -> Let
   "=>" -> FatArrow
   "=" -> Equal
+  "[" -> LBracket
+  "]" -> RBracket
   "(" -> LParen
   ")" -> RParen
   "," -> Comma

@@ -42,8 +42,8 @@ main = do
   -}
   where
     (f, s) = parse tokens
-    tokens = tokenize "(1, 2, 3, \"hello\") a b c"
+    tokens = tokenize "[1, 2, 3, \"hello\"] a b c"
     (f', s') = parse tokens'
     tokens' = tokenize "print \"c\" 2 3"
     (f'', s'') = parse tokens''
-    tokens'' = tokenize "let x = (a, b) => print (b, a); x \"hello\" - 5 3"
+    tokens'' = tokenize "let x = (a, b) => print [b, a]; x \"hello\" (- 6 (+ 2 3))"

@@ -24,7 +24,7 @@ parseTuple tokens = Tuple $ exprs
 parseArguments :: [Expr] -> [Token] -> ([Expr], [Token])
 parseArguments acc [] = (acc, [])
 parseArguments acc tokens@(Comma : _) = (acc, tokens)
-parseArguments acc tokens@(RParen : _) = (acc, tokens)
+parseArguments acc tokens@(RBracket : _) = (acc, tokens)
 parseArguments acc tokens@(BreakExpr : _) = (acc, tokens)
 parseArguments acc tokens = (acc ++ [f] ++ f', s')
   where
@@ -38,13 +38,23 @@ parseParameters tokens = map f $ filter (/= Comma) tokens
       LiteralToken name -> name
       _ -> error $ show ("Invalid parameter", token)
 
-getScopeTokens :: [Token] -> Int -> [Token]
-getScopeTokens (token : tokens) currentLevel
+getBracketTokens :: [Token] -> Int -> [Token]
+getBracketTokens (token : tokens) currentLevel
   | currentLevel == 0 = []
-  | token == LParen = token : getScopeTokens tokens (currentLevel + 1)
-  | token == RParen = token : getScopeTokens tokens (currentLevel - 1)
-  | otherwise = token : getScopeTokens tokens currentLevel
-getScopeTokens tokens currentLevel
+  | token == LBracket = token : getBracketTokens tokens (currentLevel + 1)
+  | token == RBracket = token : getBracketTokens tokens (currentLevel - 1)
+  | otherwise = token : getBracketTokens tokens currentLevel
+getBracketTokens tokens currentLevel
+  | currentLevel == 0 = tokens
+  | otherwise = []
+
+getParenTokens :: [Token] -> Int -> [Token]
+getParenTokens (token : tokens) currentLevel
+  | currentLevel == 0 = []
+  | token == LParen = token : getParenTokens tokens (currentLevel + 1)
+  | token == RParen = token : getParenTokens tokens (currentLevel - 1)
+  | otherwise = token : getParenTokens tokens currentLevel
+getParenTokens tokens currentLevel
   | currentLevel == 0 = tokens
   | otherwise = []
 
@@ -64,14 +74,18 @@ parse (token : tokens) = case token of
       name = case head tokens of
         LiteralToken name' -> name'
         _ -> error $ show ("Invalid variable name", tokens)
-  LParen -> case safeHead remainingTokens of
-    Just FatArrow -> (Abs params body, remainingTokens')
-      where
-        params = parseParameters $ init scopeTokens
-        (body, remainingTokens') = parse $ tail remainingTokens
-    Nothing -> (parseTuple scopeTokens, [])
-    _ -> (parseTuple scopeTokens, remainingTokens)
+  LBracket -> (parseTuple scopeTokens, remainingTokens)
     where
       remainingTokens = drop (length scopeTokens) tokens
-      scopeTokens = getScopeTokens tokens 1
+      scopeTokens = getBracketTokens tokens 1
+  LParen -> case safeHead s of
+    Just FatArrow -> (Abs params body, s')
+      where
+        params = parseParameters $ init scopeTokens
+        (body, s') = parse $ tail s
+    _ -> (f, s)
+    where
+      (f, _) = parse $ init scopeTokens
+      s = drop (length scopeTokens) tokens
+      scopeTokens = getParenTokens tokens 1
   _ -> error $ show ("Trying to parse an invalid token", token)
