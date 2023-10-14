@@ -1,64 +1,42 @@
 module Parser (parse, Expr (..)) where
 
+import Data.List.Split
 import Lexer (Token (..))
 
 data Expr
   = Assignment String Expr Expr
   | Call String [Expr]
   | Abs [String] Expr
-  | Print [Expr]
-  | Var String
   | Numeric Integer
   | Text String
-  | EOF
+  | Tuple [Expr]
   deriving (Show)
 
-parseValue :: Token -> [Token] -> (Expr, [Token])
-parseValue (TextToken value) tokens = (Text value, tokens)
-parseValue (NumericToken value) tokens = (Numeric value, tokens)
-parseValue (LiteralToken value) tokens = (Var value, tokens)
-parseValue token _ = error $ show ("Invalid token passed to value parser", token)
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (a:_) = Just a
 
-parseArguments :: [String] -> [Token] -> ([String], [Token])
-parseArguments acc ((LiteralToken argument) : tokens) = (argument : argumentsAcc, remainingTokens)
+parseTuple :: [Token] -> Expr
+parseTuple tokens = Tuple $ exprs
   where
-    (argumentsAcc, remainingTokens) = parseArguments acc tokens
-parseArguments acc (FatArrow : tokens) = (acc, tokens)
-parseArguments _ tokens = error $ show ("Invalid function definition", tokens)
+    exprs = map (\x -> fst $ parse x) $ splitOn [Comma] tokens
 
-parseFunction :: [Token] -> (Expr, [Token])
-parseFunction tokens = (Abs arguments body, remainingTokens')
+parseArguments :: [Expr] -> [Token] -> ([Expr], [Token])
+parseArguments acc [] = (acc, [])
+parseArguments acc tokens@(Comma : _) = (acc, tokens)
+parseArguments acc tokens@(RParen : _) = (acc, tokens)
+parseArguments acc tokens@(BreakExpr : _) = (acc, tokens)
+parseArguments acc tokens = (acc ++ [f] ++ f', s')
   where
-    (body, remainingTokens') = parse remainingTokens
-    (arguments, remainingTokens) = parseArguments [] tokens
-
-parseVariable :: [Token] -> (Expr, [Token])
-parseVariable ((LiteralToken name) : Equal : tokens) = (Assignment name expr expr', remainingTokens')
-  where
-    (expr', remainingTokens') = parse remainingTokens
-    (expr, remainingTokens) = parse tokens
-parseVariable tokens = error $ show ("Invalid variable definition", tokens)
-
-parseParameters :: [Expr] -> [Token] -> ([Expr], [Token])
-parseParameters acc [] = (acc, [])
-parseParameters acc tokens@(RParen : _) = (acc, tokens)
-parseParameters acc tokens@(BreakExpr : _) = (acc, tokens)
-parseParameters acc tokens = (acc ++ [f] ++ f', s')
-  where
-    (f', s') = parseParameters [] s
+    (f', s') = parseArguments [] s
     (f, s) = parse tokens
 
-parseCall :: [Token] -> (Expr, [Token])
-parseCall ((LiteralToken name) : tokens) = (f, remainingTokens)
+parseParameters :: [Token] -> [String]
+parseParameters tokens = map f $ filter (/= Comma) tokens
   where
-    f = Call name args
-    (args, remainingTokens) = parseParameters [] tokens
-parseCall tokens = error $ show ("invalid call", tokens)
-
-parsePrint :: [Token] -> (Expr, [Token])
-parsePrint tokens = (Print f, s)
-  where
-    (f, s) = parseParameters [] tokens
+    f = \token -> case token of
+      LiteralToken name -> name
+      _ -> error $ show ("Invalid parameter", token)
 
 getScopeTokens :: [Token] -> Int -> [Token]
 getScopeTokens (token : tokens) currentLevel
@@ -71,18 +49,29 @@ getScopeTokens tokens currentLevel
   | otherwise = []
 
 parse :: [Token] -> (Expr, [Token])
-parse [] = (EOF, [])
+parse [] = error "Empty source"
 parse (token : tokens) = case token of
-  Let -> parseVariable tokens
-  FunctionDef -> parseFunction tokens
-  PrintToken -> parsePrint tokens
-  LParen -> (f, s)
-    where
-      (f, _) = parse scopeTokens
-      s = drop (length scopeTokens) tokens
-      scopeTokens = getScopeTokens tokens 1
-  TextToken _ -> parseValue token tokens
-  LiteralToken _ -> parseCall $ token : tokens
-  NumericToken _ -> parseValue token tokens
   BreakExpr -> parse tokens
+  TextToken content -> (Text content, tokens)
+  NumericToken value -> (Numeric value, tokens)
+  LiteralToken name -> (Call name args, s)
+    where
+      (args, s) = parseArguments [] tokens
+  Let -> (Assignment name f f', s')
+    where
+      (f', s') = parse s
+      (f, s) = parse $ drop 2 tokens
+      name = case head tokens of
+        LiteralToken name' -> name'
+        _ -> error $ show ("Invalid variable name", tokens)
+  LParen -> case safeHead remainingTokens of
+    Just FatArrow -> (Abs params body, remainingTokens')
+      where
+        params = parseParameters $ init scopeTokens
+        (body, remainingTokens') = parse $ tail remainingTokens
+    Nothing -> (parseTuple scopeTokens, [])
+    _ -> (parseTuple scopeTokens, remainingTokens)
+    where
+      remainingTokens = drop (length scopeTokens) tokens
+      scopeTokens = getScopeTokens tokens 1
   _ -> error $ show ("Trying to parse an invalid token", token)

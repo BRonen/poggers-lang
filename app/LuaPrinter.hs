@@ -21,12 +21,9 @@ buildSource acc expr = case expr of
         where
             acc' = acc ++ ["function (", args',")\n"]
             args' = intercalate ", " args
-    Print args -> acc ++ [buildFunctionCall "print" args]
-    Var name -> acc ++ [name]
     Call name args -> acc ++ [buildFunctionCall name args]
     Numeric value -> acc ++ [show value]
     Text value -> acc ++ ["'", value, "'"]
-    EOF -> error "Invalid source"
 
 printToLua :: Expr -> String
 printToLua expr = concat $ buildSource [] expr

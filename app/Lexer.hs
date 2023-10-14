@@ -7,14 +7,9 @@ data Token
   = TextToken String
   | LiteralToken String
   | NumericToken Integer
-  | PrintToken
   | Let
-  | FunctionDef
   | FatArrow
-  | Plus
-  | Minus
-  | Slash
-  | Star
+  | Comma
   | Equal
   | LParen
   | RParen
@@ -22,10 +17,11 @@ data Token
   deriving (Show, Eq)
 
 especialCharacters :: [Char]
-especialCharacters = ['(', ')', ';']
+especialCharacters = ['(', ')', ';', ',']
 
 -- TODO: remove duplicated code
 getWordsFromSource :: [Char] -> [String] -> String -> [String]
+getWordsFromSource [] wordsAcc [] = wordsAcc
 getWordsFromSource acc wordsAcc [] = wordsAcc ++ [acc]
 getWordsFromSource [] wordsAcc (x : xs)
   | x `elem` especialCharacters = getWordsFromSource [] (wordsAcc ++ [[x]]) xs
@@ -46,13 +42,12 @@ tokenizeLiteral word
 
 getTokenByWord :: [Char] -> Token
 getTokenByWord word = case word of
-  "print" -> PrintToken
   "let" -> Let
-  "fn" -> FunctionDef
   "=>" -> FatArrow
   "=" -> Equal
   "(" -> LParen
   ")" -> RParen
+  "," -> Comma
   ";" -> BreakExpr
   _ -> tokenizeLiteral word
 
