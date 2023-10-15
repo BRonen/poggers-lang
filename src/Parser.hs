@@ -14,12 +14,12 @@ data Expr
 
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
-safeHead (a:_) = Just a
+safeHead (a : _) = Just a
 
 parseTuple :: [Token] -> Expr
-parseTuple tokens = Tuple $ exprs
+parseTuple tokens = Tuple exprs
   where
-    exprs = map (\x -> fst $ parse x) $ splitOn [Comma] tokens
+    exprs = map (fst . parse) $ splitOn [Comma] tokens
 
 parseArguments :: [Expr] -> [Token] -> ([Expr], [Token])
 parseArguments acc [] = (acc, [])
@@ -34,7 +34,7 @@ parseArguments acc tokens = (acc ++ [f] ++ f', s')
 parseParameters :: [Token] -> [String]
 parseParameters tokens = map f $ filter (/= Comma) tokens
   where
-    f = \token -> case token of
+    f token = case token of
       LiteralToken name -> name
       _ -> error $ show ("Invalid parameter", token)
 

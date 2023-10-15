@@ -13,13 +13,42 @@ extra-doc-files:    README.md
 common warnings
     ghc-options: -Wall
 
-executable poggerslang
-    import:           warnings
-    main-is:          Main.hs
-    build-depends:    split, containers, base ^>=4.16.4.0 
-    hs-source-dirs:   app
-    default-language: Haskell2010
-    other-modules: Lexer Parser Eval LuaPrinter
-
 library
-  source-dirs: app
+    exposed-modules: Lexer Parser Eval LuaPrinter
+    other-modules:
+        Paths_poggerslang
+    hs-source-dirs: src
+    build-depends:
+        base ^>=4.16.4.0
+      , containers
+      , split
+    default-language: Haskell2010
+
+executable poggerslang-exe
+    import:         warnings
+    main-is:        Main.hs
+    other-modules:
+        Paths_poggerslang
+    hs-source-dirs:
+        app
+    build-depends:
+        base ^>=4.16.4.0
+      , poggerslang
+    default-language: Haskell2010
+
+Test-Suite poggerslang-test
+    type: exitcode-stdio-1.0
+    main-is: Spec.hs
+    other-modules:
+        Paths_poggerslang
+    hs-source-dirs:
+        test
+    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+    build-depends:
+        base ^>=4.16.4.0
+      , tasty
+      , tasty-hunit
+      , containers
+      , split
+      , poggerslang
+    default-language: Haskell2010
