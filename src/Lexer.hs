@@ -15,7 +15,7 @@ data Token
   | RBracket
   | LParen
   | RParen
-  | BreakExpr
+  | SemiColon
   deriving (Show, Eq)
 
 especialCharacters :: [Char]
@@ -52,7 +52,7 @@ getTokenByWord word = case word of
   "(" -> LParen
   ")" -> RParen
   "," -> Comma
-  ";" -> BreakExpr
+  ";" -> SemiColon
   _ -> tokenizeLiteral word
 
 tokenize :: String -> [Token]

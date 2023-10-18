@@ -1,0 +1,5 @@
+[LiteralToken "print",TextToken "hello_world"]
+
+(Call "print" [Text "hello_world"],[])
+
+"EText \"hello_world\""

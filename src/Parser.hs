@@ -25,7 +25,7 @@ parseArguments :: [Expr] -> [Token] -> ([Expr], [Token])
 parseArguments acc [] = (acc, [])
 parseArguments acc tokens@(Comma : _) = (acc, tokens)
 parseArguments acc tokens@(RBracket : _) = (acc, tokens)
-parseArguments acc tokens@(BreakExpr : _) = (acc, tokens)
+parseArguments acc tokens@(SemiColon : _) = (acc, tokens)
 parseArguments acc tokens = (acc ++ [f] ++ f', s')
   where
     (f', s') = parseArguments [] s
@@ -61,7 +61,7 @@ getParenTokens tokens currentLevel
 parse :: [Token] -> (Expr, [Token])
 parse [] = error "Empty source"
 parse (token : tokens) = case token of
-  BreakExpr -> parse tokens
+  SemiColon -> parse tokens
   TextToken content -> (Text content, tokens)
   NumericToken value -> (Numeric value, tokens)
   LiteralToken name -> (Call name args, s)
