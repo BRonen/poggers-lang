@@ -1,14 +1,13 @@
 module Main (main) where
 
+import qualified GoldenTests as GT
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import qualified GoldenTests as GT
-
 main :: IO ()
 main = do
-    goldenTests <- GT.tests
-    defaultMain $ testGroup "Root" [goldenTests, test1, test2]
+  goldenTests <- GT.tests
+  defaultMain $ testGroup "Root" [goldenTests, test1, test2]
 
 test1 :: TestTree
 test1 = testCase "2+2=4" $ (2 + 2 :: Integer) @?= (4 :: Integer)
