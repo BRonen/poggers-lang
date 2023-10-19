@@ -1,4 +1,4 @@
-module Parser (parse, SyntaxTree, STree(..)) where
+module Parser (parse, SyntaxTree, STree (..)) where
 
 import Data.List.Split
 import Lexer (Token (..))
@@ -39,27 +39,40 @@ parseTuple values tokens = case value of
   where
     (value, rest) = parse tokens
 
-parseParameters :: [String] -> [Token] -> ([String], [Token])
-parseParameters acc (RParen:FatArrow:tokens) = (acc, tokens)
-parseParameters acc ((LiteralToken value):tokens) = parseParameters (acc ++ [value]) tokens
-parseParameters acc tokens = (acc, tokens)
+parseParameters :: [String] -> [Token] -> Either Bool ([String], [Token])
+parseParameters acc (RParen : FatArrow : tokens) = Right (acc, tokens)
+parseParameters acc ((LiteralToken value) : tokens) = parseParameters (acc ++ [value]) tokens
+parseParameters acc _ = Left False
 
-parseAbstraction :: [Token] -> (SyntaxTree, [Token])
-parseAbstraction tokens = case body of
-    Right body' -> (Right $ Abs parameters body', rest)
-    l -> (l, [])
+parseAbstraction :: [Token] -> Either Bool (SyntaxTree, [Token])
+parseAbstraction tokens = case parameters of
+  Right f -> case body of
+    Right body' -> Right (Right $ Abs parameters' body', rest)
+    l -> Right (l, [])
+    where
+      (body, rest) = parse tokens'
+      (parameters', tokens') = f
+  Left f -> Left f
   where
-    (body, rest) = parse tokens'
-    (parameters, tokens') = parseParameters [] $ tail tokens
+    parameters = parseParameters [] tokens
 
 parseArguments :: [STree] -> [Token] -> ([STree], [Token])
 parseArguments acc [] = (acc, [])
-parseArguments acc (RParen : FatArrow : tokens) = (acc, tokens)
+parseArguments acc (RParen : tokens) = (acc, tokens)
+parseArguments acc (SemiColon : tokens) = (acc, tokens)
+parseArguments acc (Comma : tokens) = (acc, tokens)
 parseArguments acc tokens = case f of
   Right f' -> parseArguments (acc ++ [f']) rest
   Left _ -> (acc, rest)
   where
     (f, rest) = parse tokens
+
+parseCall :: STree -> [Token] -> (SyntaxTree, [Token])
+parseCall f tokens = case safeHead tokens of
+  Just Exclamation -> (Right $ ICall f args, rest')
+    where
+      (args, rest') = parseArguments [] tokens
+  _ -> (Right f, tokens)
 
 parse :: [Token] -> (SyntaxTree, [Token])
 parse [] = (Left ("Empty source", []), [])
@@ -69,15 +82,13 @@ parse (token : tokens) = case token of
   TextToken value -> (Right $ Text value, tokens)
   Let -> (parseAssignment tokens, [])
   LBracket -> parseTuple [] tokens
-  LParen -> case f of
-    Right f' -> case safeHead rest of
-      Just Exclamation -> (Right $ ICall f' args, rest')
-        where
-          (args, rest') = parseArguments [] rest
-      _ -> (f, rest)
-    l -> (l, [])
+  LParen -> case abs of
+    Right (f, rest) -> case f of
+        Right f' -> parseCall f' rest
+        l -> (l, [])
+    Left _ -> parse tokens
     where
-      (f, rest) = parseAbstraction tokens
+    abs = parseAbstraction tokens
   LiteralToken name -> case safeHead tokens of
     Just Exclamation -> (Right $ Call name args, rest)
       where

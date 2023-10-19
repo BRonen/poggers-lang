@@ -26,6 +26,7 @@ genGoldenTest pogFile =
 
 generateOutput :: BL.ByteString -> IO BL.ByteString
 generateOutput contentPog = do
+  print lexerContent
   print parserContent
   case parserContent of
     Right content -> do
