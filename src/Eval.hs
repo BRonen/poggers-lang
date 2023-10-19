@@ -1,18 +1,18 @@
 module Eval (eval) where
 
 import Data.Map as Map
-import Parser (Expr (..))
+import Parser (STree (..))
 
 data Value
   = ENumber Integer
   | EText String
-  | EApplication Context [String] Expr
+  | EApplication Context [String] STree
   | ETuple [Value]
   deriving (Show)
 
 type Context = Map String Value
 
-checkBuiltInValues :: String -> [Expr] -> Context -> IO Value
+checkBuiltInValues :: String -> [STree] -> Context -> IO Value
 checkBuiltInValues name args ctx = case name of
   "+" -> do
     f <- evalExpr ctx $ head args
@@ -56,7 +56,7 @@ checkBuiltInValues name args ctx = case name of
     _ -> error $ show "Snd must be called with a tuple"
   _ -> error $ show ("Reference not found", name)
 
-evalExpr :: Context -> Expr -> IO Value
+evalExpr :: Context -> STree -> IO Value
 evalExpr ctx expr = case expr of
   Assignment name value next -> do
     expr' <- evalExpr ctx value
@@ -76,10 +76,10 @@ evalExpr ctx expr = case expr of
   Text value -> return $ EText value
   Abs args expr' -> return $ EApplication ctx args expr'
   Tuple values -> do
-    values' <- sequence $ Prelude.map (evalExpr ctx) values
+    values' <- mapM (evalExpr ctx) values
     return $ ETuple values'
 
-eval :: Expr -> IO String
+eval :: STree -> IO String
 eval expr = do
   result <- evalExpr Map.empty expr
   return $ show result

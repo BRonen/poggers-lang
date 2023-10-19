@@ -26,16 +26,20 @@ genGoldenTest pogFile =
 
 generateOutput :: BL.ByteString -> IO BL.ByteString
 generateOutput contentPog = do
-  evalContent <- eval $ fst parserContent
-  return $
-    BLU.fromString $
-      concat
-        [ show lexerContent,
-          ['\n', '\n'],
-          show parserContent,
-          ['\n', '\n'],
-          show evalContent
-        ]
+  print parserContent
+  case parserContent of
+    Right content -> do
+      evalContent <- eval content
+      return $ BLU.fromString $
+        concat
+          [ show lexerContent,
+            ['\n', '\n'],
+            show parserContent,
+            ['\n', '\n'],
+            show evalContent
+          ]
+    _ -> return $ BLU.fromString "Invalid parsing"
+
   where
-    parserContent = parse lexerContent
+    (parserContent, _) = parse lexerContent
     lexerContent = tokenize $ BLU.toString contentPog

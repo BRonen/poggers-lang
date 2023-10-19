@@ -16,10 +16,11 @@ data Token
   | LParen
   | RParen
   | SemiColon
+  | Exclamation
   deriving (Show, Eq)
 
 especialCharacters :: [Char]
-especialCharacters = ['[', ']', '(', ')', ';', ',']
+especialCharacters = ['[', ']', '(', ')', ';', ',', '!']
 
 -- TODO: remove duplicated code
 getWordsFromSource :: [Char] -> [String] -> String -> [String]
@@ -53,6 +54,7 @@ getTokenByWord word = case word of
   ")" -> RParen
   "," -> Comma
   ";" -> SemiColon
+  "!" -> Exclamation
   _ -> tokenizeLiteral word
 
 tokenize :: String -> [Token]
