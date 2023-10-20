@@ -62,6 +62,11 @@ evalExpr ctx expr = case expr of
     expr' <- evalExpr ctx value
     let customCtx = Map.insert name expr' ctx
     evalExpr customCtx next
+  Ref name -> case Map.lookup name ctx of
+    Just (ENumber value) -> return $ ENumber value
+    Just (EText value) -> return $ EText value
+    Just (ETuple values) -> return $ ETuple values
+    Just (EApplication ctx args expr) -> return $ EApplication ctx args expr
   Call name args -> case Map.lookup name ctx of
     Just (ENumber value) -> return $ ENumber value
     Just (EText value) -> return $ EText value

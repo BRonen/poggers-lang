@@ -1,0 +1,3 @@
+let apply = (op a b) => op! a b;
+let add = (a b) => +! a b;
+print! apply! add 2 3

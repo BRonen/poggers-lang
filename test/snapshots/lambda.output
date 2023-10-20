@@ -1,0 +1,5 @@
+[Let,LiteralToken "apply",Equal,LParen,LiteralToken "op",LiteralToken "a",LiteralToken "b",RParen,FatArrow,LiteralToken "op",Exclamation,LiteralToken "a",LiteralToken "b",SemiColon,Let,LiteralToken "add",Equal,LParen,LiteralToken "a",LiteralToken "b",RParen,FatArrow,LiteralToken "+",Exclamation,LiteralToken "a",LiteralToken "b",SemiColon,LiteralToken "print",Exclamation,LiteralToken "apply",Exclamation,LiteralToken "add",NumericToken 2,NumericToken 3]
+
+Right (Assignment "apply" (Abs ["op","a","b"] (Call "op" [Ref "a",Ref "b"])) (Assignment "add" (Abs ["a","b"] (Call "+" [Ref "a",Ref "b"])) (Call "print" [Call "apply" [Ref "add",Numeric 2,Numeric 3]])))
+
+"ENumber 5"

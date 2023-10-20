@@ -7,6 +7,7 @@ data STree
   = Assignment String STree STree
   | Call String [STree]
   | ICall STree [STree]
+  | Ref String
   | Abs [String] STree
   | Numeric Integer
   | Text String
@@ -19,8 +20,16 @@ safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
 safeHead (a : _) = Just a
 
+parseText :: [Token] -> SyntaxTree
+parseText ((TextToken token):tokens) = Right $ Text token
+parseText tokens = Left ("Invalid text", tokens)
+
+parseNumber :: [Token] -> SyntaxTree
+parseNumber ((NumericToken token):tokens) = Right $ Numeric token
+parseNumber tokens = Left ("Invalid number", tokens)
+
 parseAssignment :: [Token] -> SyntaxTree
-parseAssignment (LiteralToken name : _ : tokens) = case (value, next, rest') of
+parseAssignment (Let : LiteralToken name : _ : tokens) = case (value, next, rest') of
   (Right value', Right next', []) -> Right $ Assignment name value' next'
   (Left _, _, []) -> value
   (_, Left _, []) -> next
@@ -39,22 +48,23 @@ parseTuple values tokens = case value of
   where
     (value, rest) = parse tokens
 
-parseParameters :: [String] -> [Token] -> Either Bool ([String], [Token])
-parseParameters acc (RParen : FatArrow : tokens) = Right (acc, tokens)
+parseParameters :: [String] -> [Token] -> ([String], [Token])
+parseParameters acc (RParen : FatArrow : tokens) = (acc, FatArrow : tokens)
 parseParameters acc ((LiteralToken value) : tokens) = parseParameters (acc ++ [value]) tokens
-parseParameters acc _ = Left False
+parseParameters acc [] = (acc, [])
+parseParameters _ _ = ([], [])
 
-parseAbstraction :: [Token] -> Either Bool (SyntaxTree, [Token])
-parseAbstraction tokens = case parameters of
-  Right f -> case body of
-    Right body' -> Right (Right $ Abs parameters' body', rest)
-    l -> Right (l, [])
+parseAbstraction :: [Token] -> (SyntaxTree, [Token])
+parseAbstraction (LParen:tokens) = case safeHead rest of
+  Just FatArrow -> case body of
+    Right body' -> (Right $ Abs params body', rest')
+    Left _ -> (body, [])
     where
-      (body, rest) = parse tokens'
-      (parameters', tokens') = f
-  Left f -> Left f
+      (body, rest') = parse rest
+  _ -> (Left ("Invalid function definition", []), [])
   where
-    parameters = parseParameters [] tokens
+    (params, rest) = parseParameters [] tokens
+parseAbstraction tokens = (Left ("Invalid Abstraction", tokens), tokens)
 
 parseArguments :: [STree] -> [Token] -> ([STree], [Token])
 parseArguments acc [] = (acc, [])
@@ -68,30 +78,38 @@ parseArguments acc tokens = case f of
     (f, rest) = parse tokens
 
 parseCall :: STree -> [Token] -> (SyntaxTree, [Token])
-parseCall f tokens = case safeHead tokens of
-  Just Exclamation -> (Right $ ICall f args, rest')
+parseCall abs tokens = case safeHead tokens of
+  Just Exclamation -> (Right $ ICall abs args, rest')
     where
       (args, rest') = parseArguments [] tokens
-  _ -> (Right f, tokens)
+  _ -> (Right abs, tokens)
+
+parseIdentifier :: Token -> [Token] -> (SyntaxTree, [Token])
+parseIdentifier (LiteralToken name) (Exclamation : tokens) =
+  (Right $ Call name args, rest)
+  where
+    (args, rest) = parseArguments [] tokens
+parseIdentifier (LiteralToken name) tokens = (Right $ Ref name, tokens)
+parseIdentifier token tokens = (Left ("Invalid identifier", tokens), token : tokens)
 
 parse :: [Token] -> (SyntaxTree, [Token])
 parse [] = (Left ("Empty source", []), [])
 parse (token : tokens) = case token of
   SemiColon -> parse tokens
-  NumericToken value -> (Right $ Numeric value, tokens)
-  TextToken value -> (Right $ Text value, tokens)
-  Let -> (parseAssignment tokens, [])
-  LBracket -> parseTuple [] tokens
-  LParen -> case abs of
-    Right (f, rest) -> case f of
-        Right f' -> parseCall f' rest
-        l -> (l, [])
-    Left _ -> parse tokens
-    where
-    abs = parseAbstraction tokens
-  LiteralToken name -> case safeHead tokens of
-    Just Exclamation -> (Right $ Call name args, rest)
-      where
-        (args, rest) = parseArguments [] (tail tokens)
-    _ -> (Right $ Call name [], tokens)
-  _ -> (Left ("Trying to parse an invalid token", token : tokens), [])
+  _ -> case (text, number, assignment, tuple, abs, identifier) of
+    (Right _, _, _, _, _, _) -> (text, tokens)
+    (_, Right _, _, _, _, _) -> (number, tokens)
+    (_, _, Right _, _, _, _) -> (assignment, [])
+    (_, _, _, Right _, _, _) -> (tuple, tupleRest)
+    (_, _, _, _, Right _, _) -> case (abs, safeHead absRest) of
+      (Right abs', Just Exclamation) -> parseCall abs' absRest
+      _ -> (abs, absRest)
+    (_, _, _, _, _, Left _) -> parse tokens
+    (_, _, _, _, _, Right _) -> (identifier, identifierRest)
+  where
+    (identifier, identifierRest) = parseIdentifier token tokens
+    (abs, absRest) = parseAbstraction (token : tokens)
+    (tuple, tupleRest) = parseTuple [] tokens
+    assignment = parseAssignment $ token : tokens
+    number = parseNumber $ token : tokens
+    text = parseText $ token : tokens
